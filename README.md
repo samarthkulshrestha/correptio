@@ -2,6 +2,12 @@
 
 a ptrace-based debugger
 
+### usage
+
+```console
+correptio [exe] [breakpoints]
+```
+
 ### contribute
 
 + i <3 pull requests and bug reports!
