@@ -27,8 +27,12 @@ const DebugStatus = union(enum) {
 };
 
 const Debugger = struct {
+    const int3 = 0xcc;
     exe: [:0]const u8,
     pid: std.posix.pid_t = 0,
+    bp: u64 = 0,
+    previous_bp_byte: u8 = 0,
+    regs: c.user_regs_struct = undefined,
     last_signum: i32 = 0,
 
     pub fn init(exe: [:0]const u8) Debugger {
@@ -59,6 +63,7 @@ const Debugger = struct {
         try std.posix.ptrace(std.os.linux.PTRACE.GETREGS, self.pid, 0, @intFromPtr(&regs));
         var siginfo: std.os.linux.siginfo_t = undefined;
         try std.posix.ptrace(std.os.linux.PTRACE.GETSIGINFO, self.pid, 0, @intFromPtr(&siginfo));
+        self.regs = regs;
         self.last_signum = siginfo.signo;
         return .{
             .stopped = .{
@@ -69,6 +74,22 @@ const Debugger = struct {
     }
 
     pub fn cont(self: *Debugger) !void {
+        // offset by 1 because the int3 instruction has already been hit
+        if (self.regs.rip == self.bp + 1) {
+            var current_data: u64 = 0;
+            try std.posix.ptrace(std.os.linux.PTRACE.PEEKTEXT, self.pid, self.bp, @intFromPtr(&current_data));
+            std.debug.assert(current_data & 0xff == int3); // Not interrupt
+            swap_least_significant_byte(&current_data, self.previous_bp_byte);
+            try std.posix.ptrace(std.os.linux.PTRACE.POKETEXT, self.pid, self.bp, current_data);
+            std.debug.print("put breakpoint back.\n", .{});
+            var new_regs = self.regs;
+            new_regs.rip = self.bp;
+            try std.posix.ptrace(std.os.linux.PTRACE.SETREGS, self.pid, 0, @intFromPtr(&new_regs));
+            try std.posix.ptrace(std.os.linux.PTRACE.SINGLESTEP, self.pid, 0, 0);
+            _ = try self.wait();
+            std.debug.print("new instruction pointer: 0x{x}\n", .{self.regs.rip});
+            try self.set_breakpoint(self.bp);
+        }
         if (self.last_signum == std.os.linux.SIG.TRAP) {
             try std.posix.ptrace(std.os.linux.PTRACE.CONT, self.pid, 0, 0);
         } else {
@@ -77,11 +98,17 @@ const Debugger = struct {
     }
 
     pub fn set_breakpoint(self: *Debugger, address: u64) !void {
+        self.bp = address;
         var current_data: u64 = 0;
         try std.posix.ptrace(std.os.linux.PTRACE.PEEKTEXT, self.pid, address, @intFromPtr(&current_data));
-        current_data &= ~@as(u64, 0xff);
-        current_data |= 0xcc;
+        self.previous_bp_byte = @intCast(current_data & 0xff);
+        swap_least_significant_byte(&current_data, int3);
         try std.posix.ptrace(std.os.linux.PTRACE.POKETEXT, self.pid, address, current_data);
+    }
+
+    fn swap_least_significant_byte(val: *u64, new_least_sig: u8) void {
+        val.* &= ~@as(u64, 0xff);
+        val.* |= new_least_sig;
     }
 };
 

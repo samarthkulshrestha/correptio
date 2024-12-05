@@ -1,13 +1,16 @@
 const std = @import("std");
 
-fn do_bye() void {
-    std.debug.print("bye!\n", .{});
+fn do_print_loop(val: usize) void {
+    std.debug.print("loop iter {d}\n", .{val});
 }
 
 pub fn main() !void {
     std.debug.print("hi!\n", .{});
-    std.debug.print("address of do_bye(): 0x{x}\n", .{&do_bye});
-    const content: [*]const u8 = @ptrCast(&do_bye);
-    std.debug.print("content of do_bye(): {x}\n", .{std.mem.bytesAsValue(u32, content[0..4]).*});
-    do_bye();
+    std.debug.print("address of do_print_loop(): 0x{x}\n", .{&do_print_loop});
+
+    for (0..5) |i| {
+        do_print_loop(i);
+    }
+
+    std.debug.print("bye!\n", .{});
 }
