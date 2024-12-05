@@ -10,7 +10,6 @@ fn do_print_loop_2(val: usize) void {
 
 pub fn main() !void {
     std.debug.print("hi!\n", .{});
-    std.debug.print("address of do_print_loop(): 0x{x}\n", .{&do_print_loop});
 
     for (0..5) |i| {
         do_print_loop(i);
