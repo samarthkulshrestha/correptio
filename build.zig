@@ -12,13 +12,13 @@ pub fn build(b: *std.Build) void {
 
     b.installArtifact(debuggee);
 
-    const debugger = b.addExecutable(.{
-        .name = "debugger",
-        .root_source_file = b.path("src/debugger.zig"),
+    const correptio = b.addExecutable(.{
+        .name = "correptio",
+        .root_source_file = b.path("src/correptio.zig"),
         .target = target,
         .optimize = optimize,
     });
-    debugger.linkLibC();
+    correptio.linkLibC();
 
-    b.installArtifact(debugger);
+    b.installArtifact(correptio);
 }
