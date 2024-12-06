@@ -20,7 +20,9 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    correptio.linkSystemLibrary("dwarf");
+    correptio.linkSystemLibrary("libdwarf");
+    correptio.linkSystemLibrary("z");
+    correptio.linkSystemLibrary("zstd");
     correptio.linkLibC();
 
     b.installArtifact(correptio);
@@ -31,10 +33,14 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    dwarf_test.linkSystemLibrary("dwarf");
+    dwarf_test.linkSystemLibrary("libdwarf");
+    dwarf_test.linkSystemLibrary("z");
+    dwarf_test.linkSystemLibrary("zstd");
     dwarf_test.linkLibC();
+
     const check_dwarf_test = try b.allocator.create(std.Build.Step.Compile);
     check_dwarf_test.* = dwarf_test.*;
     check.dependOn(&check_dwarf_test.step);
+
     b.installArtifact(dwarf_test);
 }

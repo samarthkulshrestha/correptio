@@ -98,6 +98,9 @@ const Debugger = struct {
         try std.posix.ptrace(std.os.linux.PTRACE.GETSIGINFO, self.pid, 0, @intFromPtr(&siginfo));
         self.regs = regs;
         self.last_signum = siginfo.signo;
+
+        std.debug.print("hit breakpoint at: 0x{x}\n", .{self.regs.rip});
+
         return .{
             .stopped = .{
                 .regs = regs,
@@ -269,6 +272,14 @@ pub fn main() !void {
                     }
                     try debugger.cont();
                 } else {
+                    std.debug.print("in wait: 0x{x}\n", .{info.regs.rip});
+                    var loc = try debugger.dwarf_info.sourceLocation(
+                        alloc,
+                        info.regs.rip,
+                        elf_metadata.di.sections[@intFromEnum(std.dwarf.DwarfSection.debug_line)].?.data,
+                    );
+                    defer loc.deinit(alloc);
+                    std.debug.print("hit breakpoint at {s}:{d}\n", .{ loc.path, loc.line });
                     try debugger.printLocals();
                     try debugger.cont();
                 }
