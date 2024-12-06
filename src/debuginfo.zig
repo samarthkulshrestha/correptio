@@ -736,8 +736,14 @@ const CompilationUnits = struct {
 pub const SourceLocation = struct {
     path: []const u8,
     line: i32,
+
     pub fn deinit(self: *SourceLocation, alloc: Allocator) void {
         alloc.free(self.path);
+    }
+
+    pub fn eql(self: SourceLocation, other: SourceLocation) bool {
+        comptime std.debug.assert(std.meta.fields(SourceLocation).len == 2);
+        return std.mem.eql(u8, self.path, other.path) and self.line == other.line;
     }
 };
 
